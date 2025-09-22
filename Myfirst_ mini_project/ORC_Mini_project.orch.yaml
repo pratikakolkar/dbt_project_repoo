@@ -1,0 +1,219 @@
+type: "orchestration"
+version: "1.0"
+pipeline:
+  components:
+    Start:
+      type: "start"
+      transitions:
+        unconditional:
+        - "Create Table"
+        - "Run Transformation"
+      parameters:
+        componentName: "Start"
+    Create Table:
+      type: "create-table-v2"
+      transitions:
+        success:
+        - "S3 Load"
+      parameters:
+        componentName: "Create Table"
+        createMethod: "Replace"
+        database: "DEMO_DATABASE"
+        schema: "DEMO_SCHEMA"
+        table: "cust_gw_jsonn"
+        snowflakeTableType: "Permanent"
+        columns:
+        - - "DATA_VALUE"
+          - "VARIANT"
+          - ""
+          - ""
+          - ""
+          - "No"
+          - "No"
+          - ""
+          - ""
+        defaultDdlCollation:
+        primaryKeys: []
+        clusteringKeys: []
+        dataRetentionTimeInDays:
+        comment:
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+    S3 Load:
+      type: "s3-load"
+      transitions:
+        success:
+        - "And"
+      parameters:
+        componentName: "S3 Load"
+        stage: "[Custom]"
+        authentication: "Credentials"
+        s3ObjectPrefix: "s3://pratuaws123/transactiondata/cust_data.json"
+        pattern: ".*"
+        encryption: "None"
+        warehouse: "COMPUTE_WH"
+        database: "DEMO_DATABASE"
+        schema: "DEMO_SCHEMA"
+        targetTable: "cust_gw_jsonn"
+        loadColumns:
+        - "DATA_VALUE"
+        format: "[Custom]"
+        fileType: "JSON"
+        compression: "AUTO"
+        enableOctal:
+        allowDuplicates:
+        stripOuterArray:
+        stripNullValues:
+        ignoreUtf8Errors:
+        nullIf1:
+        trimSpace1:
+        onError: "Abort Statement"
+        sizeLimitB:
+        purgeFiles: "False"
+        matchByColumnName:
+        truncateColumns: "True"
+        forceLoad: "True"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+    Run Transformation:
+      type: "run-transformation"
+      transitions:
+        success:
+        - "Table Iterator"
+      parameters:
+        componentName: "Run Transformation"
+        transformationJob: "Myfirst_ mini_project/generate_worksheet.tran.yaml"
+        setScalarVariables:
+        setGridVariables:
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+    Table Iterator:
+      type: "table-iterator"
+      transitions:
+        success:
+        - "And"
+      iterationTarget: "Excel Query"
+      parameters:
+        componentName: "Table Iterator"
+        mode: "Basic"
+        database: "DEMO_DATABASE"
+        schema: "DEMO_SCHEMA"
+        targetTable: "GW_WORKSHEET"
+        concurrency: "Concurrent"
+        columnMapping:
+        - - "WORKSHEET_NAME"
+          - "WORKSHEET_NAME"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+    Excel Query:
+      type: "excel-query"
+      parameters:
+        componentName: "Excel Query"
+        basicAdvancedMode: "Advanced"
+        storageType: "Amazon S3 Storage"
+        storageUrl: "s3://pratuaws123/transactiondata/store_lite.xlsx"
+        containsHeaderRow: "Yes"
+        connectionOptions:
+        sqlQuery: "SELECT*FROM ${WORKSHEET_NAME}"
+        type: "Standard"
+        primaryKeys:
+        warehouse: "COMPUTE_WH"
+        database: "DEMO_DATABASE"
+        schema: "DEMO_SCHEMA"
+        targetTable: "GW_${WORKSHEET_NAME}"
+        stage: "[Custom]"
+        stagePlatform: "Snowflake Managed"
+        loadOptions:
+        autoDebug: "Off"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+    And:
+      type: "and"
+      transitions:
+        unconditional:
+        - "run calculate profit and revenue"
+      parameters:
+        componentName: "And"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+    run calculate profit and revenue:
+      type: "run-transformation"
+      transitions:
+        success:
+        - "End Success"
+      parameters:
+        componentName: "run calculate profit and revenue"
+        transformationJob: "Myfirst_ mini_project/CALCULATION PROFIT AND REVENUE.tran.yaml"
+        setScalarVariables:
+        setGridVariables:
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+    End Success:
+      type: "end-success"
+      parameters:
+        componentName: "End Success"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+  variables:
+    WORKSHEET_NAME:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "COPIED"
+        visibility: "PUBLIC"
+      defaultValue: "ITEMS"
+design:
+  components:
+    Start:
+      position:
+        x: -450
+        "y": -30
+      tempMetlId: 1
+    Create Table:
+      position:
+        x: -210
+        "y": 130
+      tempMetlId: 2
+    S3 Load:
+      position:
+        x: 40
+        "y": 130
+      tempMetlId: 3
+    Run Transformation:
+      position:
+        x: -210
+        "y": -210
+      tempMetlId: 4
+    Table Iterator:
+      position:
+        x: 40
+        "y": -230
+      tempMetlId: 5
+    Excel Query:
+      position:
+        x: 40
+        "y": -230
+      tempMetlId: 6
+    And:
+      position:
+        x: 260
+        "y": -40
+      tempMetlId: 7
+    run calculate profit and revenue:
+      position:
+        x: 430
+        "y": -40
+      tempMetlId: 8
+    End Success:
+      position:
+        x: 610
+        "y": -40
+      tempMetlId: 9

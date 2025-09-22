@@ -1,0 +1,271 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    customers_accounts:
+      type: "table-input"
+      parameters:
+        componentName: "customers_accounts"
+        database: "DEMO_DATABASE"
+        schema: "DEMO_SCHEMA"
+        targetTable: "cust_gw_jsonn"
+        columnNames:
+        - "DATA_VALUE"
+        timeOffset:
+    ITEMS:
+      type: "table-input"
+      parameters:
+        componentName: "ITEMS"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "GW_ITEMS"
+        columnNames:
+        - "RID"
+        - "NAME"
+        - "PRICE"
+        - "COST"
+        timeOffset:
+    Orders:
+      type: "table-input"
+      parameters:
+        componentName: "Orders"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "GW_ORDERS"
+        columnNames:
+        - "RID"
+        - "CUSTOMER_RID"
+        - "ORDER_DATE"
+        timeOffset:
+    ORDER_ITEMS:
+      type: "table-input"
+      parameters:
+        componentName: "ORDER_ITEMS"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "GW_ORDER_ITEMS"
+        columnNames:
+        - "RID"
+        - "ORDER_RID"
+        - "ITEM_RID"
+        - "QUANTITY"
+        timeOffset:
+    CUSTOMER_ACC:
+      type: "extract-nested-data-sf"
+      sources:
+      - "customers_accounts"
+      parameters:
+        componentName: "CUSTOMER_ACC"
+        includeInputColumns: "Yes"
+        columns:
+        - name: "data"
+          datatype: "VARIANT"
+          size: "0"
+          decimalPlaces: "0"
+          columnName: "DATA_VALUE"
+          aliasName: "data"
+          isArray: "true"
+          include: "false"
+          childElements:
+          - name: "data-element"
+            datatype: "VARIANT"
+            size: "0"
+            decimalPlaces: "0"
+            columnName: "DATA_VALUE"
+            aliasName: "data-element"
+            isArray: "false"
+            include: "false"
+            childElements:
+            - name: "customer_rid"
+              datatype: "NUMBER"
+              size: "0"
+              decimalPlaces: "0"
+              columnName: "DATA_VALUE"
+              aliasName: "customer_rid"
+              isArray: "false"
+              include: "true"
+            - name: "account_name"
+              datatype: "VARCHAR"
+              size: "0"
+              decimalPlaces: "0"
+              columnName: "DATA_VALUE"
+              aliasName: "account_name"
+              isArray: "false"
+              include: "true"
+        outerJoin: "No"
+        inputAlias: "i"
+        arrayPrefix: "f"
+        castingMethod: "Fail on invalid data"
+        caseColumnAliasNames: "No"
+    GW_ITEMS:
+      type: "convert-type"
+      sources:
+      - "ITEMS"
+      parameters:
+        componentName: "GW_ITEMS"
+        conversions:
+        - - "RID"
+          - "VARCHAR"
+          - ""
+          - ""
+        - - "NAME"
+          - "VARCHAR"
+          - ""
+          - ""
+        - - "PRICE"
+          - "VARCHAR"
+          - ""
+          - ""
+        - - "COST"
+          - "VARCHAR"
+          - ""
+          - ""
+    GW_ORDERS:
+      type: "convert-type"
+      sources:
+      - "Orders"
+      parameters:
+        componentName: "GW_ORDERS"
+        conversions:
+        - - "CUSTOMER_RID"
+          - "VARCHAR"
+          - ""
+          - ""
+        - - "RID"
+          - "VARCHAR"
+          - ""
+          - ""
+        - - "ORDER_DATE"
+          - "VARCHAR"
+          - ""
+          - ""
+    GW_OEDER_ITEMS:
+      type: "convert-type"
+      sources:
+      - "ORDER_ITEMS"
+      parameters:
+        componentName: "GW_OEDER_ITEMS"
+        conversions:
+        - - "ITEM_RID"
+          - "VARCHAR"
+          - ""
+          - ""
+        - - "ORDER_RID"
+          - "VARCHAR"
+          - ""
+          - ""
+        - - "RID"
+          - "VARCHAR"
+          - ""
+          - ""
+        - - "QUANTITY"
+          - "VARCHAR"
+          - ""
+          - ""
+    joins_table:
+      type: "join"
+      sources:
+      - "CUSTOMER_ACC"
+      - "GW_ITEMS"
+      - "GW_ORDERS"
+      - "GW_OEDER_ITEMS"
+      parameters:
+        componentName: "joins_table"
+        mainTable: "GW_OEDER_ITEMS"
+        mainTableAlias: "OI"
+        joins:
+        - - "GW_ORDERS"
+          - "o"
+          - "Inner"
+        - - "GW_ITEMS"
+          - "i"
+          - "Inner"
+        - - "CUSTOMER_ACC"
+          - "A"
+          - "Inner"
+        joinExpressions:
+        - - "\"OI\".\"ORDER_RID\"=\"o\".\"RID\""
+          - "OI_Inner_o"
+        - - "\"OI\".\"ITEM_RID\"=\"i\".\"RID\""
+          - "OI_Inner_i"
+        - - "\"o\".\"CUSTOMER_RID\"=\"A\".\"customer_rid\""
+          - "OI_Inner_A"
+        columnMappings:
+        - - "o.ORDER_DATE"
+          - "ORDER_DATE"
+        - - "OI.QUANTITY"
+          - "QUANTITY"
+        - - "i.NAME"
+          - "NAME"
+        - - "i.PRICE"
+          - "PRICE"
+        - - "i.COST"
+          - "COST"
+    Calculator:
+      type: "calculator"
+      sources:
+      - "joins_table"
+      parameters:
+        componentName: "Calculator"
+        includeInputColumns: "Yes"
+        calculations:
+  variables:
+    WORKSHEET_NAME:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "COPIED"
+        visibility: "PUBLIC"
+      defaultValue: "ORDERS"
+design:
+  components:
+    customers_accounts:
+      position:
+        x: -230
+        "y": -200
+      tempMetlId: 1
+    ITEMS:
+      position:
+        x: -240
+        "y": -90
+      tempMetlId: 2
+    Orders:
+      position:
+        x: -240
+        "y": 30
+      tempMetlId: 3
+    ORDER_ITEMS:
+      position:
+        x: -240
+        "y": 150
+      tempMetlId: 4
+    CUSTOMER_ACC:
+      position:
+        x: -80
+        "y": -210
+      tempMetlId: 5
+    GW_ITEMS:
+      position:
+        x: -90
+        "y": -80
+      tempMetlId: 6
+    GW_ORDERS:
+      position:
+        x: -80
+        "y": 30
+      tempMetlId: 7
+    GW_OEDER_ITEMS:
+      position:
+        x: -80
+        "y": 150
+      tempMetlId: 8
+    joins_table:
+      position:
+        x: 180
+        "y": -30
+      tempMetlId: 9
+    Calculator:
+      position:
+        x: 340
+        "y": -30
+      tempMetlId: 10
